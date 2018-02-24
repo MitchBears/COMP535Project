@@ -154,15 +154,6 @@ public class Router {
     }
   }
 
-  private int howMany() {
-    for (int i = 0; i <= 4; i++) {
-      if (ports[i] == null) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
   //Set up SOSPFPacket for LSAUPDATE
   public SOSPFPacket createLSPPacket(RouterDescription receivingRouter, Link link) {
     SOSPFPacket packetToReturn = new SOSPFPacket();
@@ -175,72 +166,64 @@ public class Router {
     packetToReturn.sospfType = 1;
     packetToReturn.srcProcessWeight = link.linkWeight;
     return packetToReturn;
-
-
-
   }
 
   /**
    * broadcast Hello to neighbors
    */
   private void processStart() {
-    final int number = howMany();
-    for (int i = 0; i < number; i++) {
-      if (ports[i].attached) {
-        final Link port = ports[i];
-        Thread broadcast = new Thread(new Runnable() {
-          @Override
-          public void run() {
-            try{
-              Socket socketConnection = new Socket(InetAddress.getLocalHost(), port.router2.processPortNumber);
-              ObjectOutputStream out = new ObjectOutputStream(socketConnection.getOutputStream());
-              SOSPFPacket outgoingPacket = new SOSPFPacket();
-              outgoingPacket.dstIP = port.router2.simulatedIPAddress;
-              outgoingPacket.srcIP = port.router1.simulatedIPAddress;
-              outgoingPacket.srcProcessIP = "127.0.0.1";
-              outgoingPacket.srcProcessPort = port.router1.processPortNumber;
-              outgoingPacket.neighborID = port.router1.simulatedIPAddress;
-              outgoingPacket.sospfType = 0;
-              port.router2.status = RouterStatus.INIT;
+    for (int i = 0; i < portIndex; i++) {
+      final Link port = ports[i];
+      Thread broadcast = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try{
+            Socket socketConnection = new Socket(InetAddress.getLocalHost(), port.router2.processPortNumber);
+            ObjectOutputStream out = new ObjectOutputStream(socketConnection.getOutputStream());
+            SOSPFPacket outgoingPacket = new SOSPFPacket();
+            outgoingPacket.dstIP = port.router2.simulatedIPAddress;
+            outgoingPacket.srcIP = port.router1.simulatedIPAddress;
+            outgoingPacket.srcProcessIP = "127.0.0.1";
+            outgoingPacket.srcProcessPort = port.router1.processPortNumber;
+            outgoingPacket.neighborID = port.router1.simulatedIPAddress;
+            outgoingPacket.sospfType = 0;
+            port.router2.status = RouterStatus.INIT;
+            out.writeObject(outgoingPacket);
+            ObjectInputStream in = new ObjectInputStream(socketConnection.getInputStream());
+            SOSPFPacket incomingPacket = (SOSPFPacket) in.readObject();
+            System.out.println();
+            System.out.println("received HELLO from " + incomingPacket.srcIP);
+            if (port.router2.simulatedIPAddress.equals(incomingPacket.srcIP)){
+              port.router2.status = RouterStatus.TWO_WAY;
+              System.out.println("set " + incomingPacket.srcIP + " state to TWO_WAY");
               out.writeObject(outgoingPacket);
-              ObjectInputStream in = new ObjectInputStream(socketConnection.getInputStream());
-              SOSPFPacket incomingPacket = (SOSPFPacket) in.readObject();
-             // if (incomingPacket.sospfType == 0) {
-                System.out.println();
-                System.out.println("received HELLO from " + incomingPacket.srcIP);
-                if (port.router2.simulatedIPAddress.equals(incomingPacket.srcIP)){
-                  port.router2.status = RouterStatus.TWO_WAY;
-                  System.out.println("set " + incomingPacket.srcIP + " state to TWO_WAY");
-                  out.writeObject(outgoingPacket);
-                  out.close();
-                  in.close();
-                  socketConnection.close();
-                  LinkDescription newLinkDescription = new LinkDescription();
-                  //Create new link, update LSA, send all LSA's to all neighboring nodes.
-                  newLinkDescription.linkID = port.router2.simulatedIPAddress;
-                  newLinkDescription.portNum = port.router2.processPortNumber;
-                  newLinkDescription.tosMetrics = port.linkWeight;
-                  //Update LSA
-                  lsd._store.get(rd.simulatedIPAddress).links.add(newLinkDescription);
-                  //TODO, for each neighbor, including the one you just created the link for, send the updated LSP.
-                  for(int i = 0; i < number; i++) {
-                    SOSPFPacket packet = createLSPPacket(ports[i].router2, ports[i]);
-                    Socket socket = new Socket(InetAddress.getLocalHost(), ports[i].router2.processPortNumber);
-                    ObjectOutputStream lspOut = new ObjectOutputStream(socket.getOutputStream());
-                    lspOut.writeObject(packet);
-                    lspOut.close();
-                    socket.close();
-                 }
-                }
-              //}
-            }
-            catch(Exception e){
-              e.printStackTrace();
+              out.close();
+              in.close();
+              socketConnection.close();
+              LinkDescription newLinkDescription = new LinkDescription();
+              //Create new link, update LSA, send all LSA's to all neighboring nodes.
+              newLinkDescription.linkID = port.router2.simulatedIPAddress;
+              newLinkDescription.portNum = port.router2.processPortNumber;
+              newLinkDescription.tosMetrics = port.linkWeight;
+              //Update LSA
+              lsd._store.get(rd.simulatedIPAddress).links.add(newLinkDescription);
+              //TODO, for each neighbor, including the one you just created the link for, send the updated LSP.
+              for(int i = 0; i < portIndex; i++) {
+                SOSPFPacket packet = createLSPPacket(ports[i].router2, ports[i]);
+                Socket socket = new Socket(InetAddress.getLocalHost(), ports[i].router2.processPortNumber);
+                ObjectOutputStream lspOut = new ObjectOutputStream(socket.getOutputStream());
+                lspOut.writeObject(packet);
+                lspOut.close();
+                socket.close();
+              }
             }
           }
-        });
-        broadcast.start();
-      }
+          catch(Exception e){
+            e.printStackTrace();
+          }
+        }
+      });
+      broadcast.start();
     }
   }
 
