@@ -45,12 +45,16 @@ public class Client extends Server {
                 //Create new link, update LSA, send all LSA's to all neighboring nodes.
                 newLinkDescription.linkID = port.router2.simulatedIPAddress;
                 newLinkDescription.portNum = port.router2.processPortNumber;
-                newLinkDescription.tosMetrics = port.linkWeight;
+                newLinkDescription.linkWeight = port.linkWeight;
                 //Update LSA
                 lsd._store.get(rd.simulatedIPAddress).links.add(newLinkDescription);
+                lsd._store.get(rd.simulatedIPAddress).lsaSeqNumber++;
                 //TODO, for each neighbor, including the one you just created the link for, send the updated LSP.
                 int number = howMany();
+                //System.out.println("how many:" + number);
                 for(int i = 0; i < number; i++) {
+                    //System.out.println("Sending to:");
+                    //System.out.println(ports[i].router2.simulatedIPAddress);
                     SOSPFPacket packet = createLSPPacket(ports[i].router2, ports[i]);
                     Socket socket = new Socket(InetAddress.getLocalHost(), ports[i].router2.processPortNumber);
                     ObjectOutputStream lspOut = new ObjectOutputStream(socket.getOutputStream());

@@ -53,10 +53,6 @@ public class Server implements Runnable {
           newRouter.status = RouterStatus.INIT;
           System.out.println("set " + incomingPacket.srcIP + " state to INIT");
           Link newLink = new Link(rd, newRouter, incomingPacket.srcProcessWeight, false);
-          LinkDescription newLinkDescription = new LinkDescription();
-          newLinkDescription.linkID = number + "";
-          newLinkDescription.portNum = newRouter.processPortNumber;
-          lsd._store.get(rd.simulatedIPAddress).links.add(newLinkDescription);
           ports[number] = newLink;
           return newRouter;
         }
@@ -102,18 +98,37 @@ public class Server implements Runnable {
                   if (receivedPacket.sospfType == 0) {
                     System.out.println("Received HELLO from " + receivedPacket.srcIP);
                   }
-                  doesExist(receivedPacket);
+                  RouterDescription newRouter = doesExist(receivedPacket);
+                  LinkDescription newLinkDescription = new LinkDescription();
+                  newLinkDescription.linkID = newRouter.simulatedIPAddress;
+                  newLinkDescription.portNum = newRouter.processPortNumber;
+                  newLinkDescription.linkWeight = receivedPacket.srcProcessWeight;
+                  lsd._store.get(rd.simulatedIPAddress).links.add(newLinkDescription);
+                  lsd._store.get(rd.simulatedIPAddress).lsaSeqNumber++;
+                  int number = howMany();
+                  for(int i = 0; i < number; i++) {
+                      if (ports[i].router2.simulatedIPAddress != receivedPacket.srcIP){
+                        SOSPFPacket packet = createLSPPacket(ports[i].router2, ports[i]);
+                        Socket socket = new Socket(InetAddress.getLocalHost(), ports[i].router2.processPortNumber);
+                        ObjectOutputStream lspOut = new ObjectOutputStream(socket.getOutputStream());
+                        lspOut.writeObject(packet);
+                        lspOut.close();
+                        socket.close();
+                      }   
+                  }
                   out.close();
                 }
                 else { //received a sospfType of 1, which means an LSAUPDATE.
-                  System.out.println("Woo");
+                  //System.out.println("Woo");
                   boolean changes = false;
                   for (LSA lsa : receivedPacket.lsaArray) {
                     if (lsd._store.containsKey(lsa.linkStateID)) {
                       if (lsd._store.get(lsa.linkStateID).lsaSeqNumber != lsa.lsaSeqNumber) {
                         lsd._store.put(lsa.linkStateID, lsa);
+                        //System.out.println("saved link seqNum: " + lsd._store.get(lsa.linkStateID).lsaSeqNumber);
                         changes = true;
                       }
+                      //System.out.println("already have this packet");
                     }
                     else {
                       lsd._store.put(lsa.linkStateID, lsa);
@@ -130,6 +145,8 @@ public class Server implements Runnable {
                       out.close();
                       socket.close();
                     }
+                    System.out.println("Link state database:");
+                    System.out.println(lsd.toString());
                   }
                 }
               }

@@ -1,14 +1,8 @@
 package socs.network.node;
 
 import socs.network.util.Configuration;
-import socs.network.message.SOSPFPacket;
-import socs.network.message.LinkDescription;
-import socs.network.message.LSA;
 
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.InetAddress;
 
 public class Router {
 
@@ -30,14 +24,14 @@ public class Router {
     portIndex = 0;
   }
 
-  public int routerIndex (String routerIP) {
-    for (int i = 0; i < portIndex; i++) {
-      if(ports[i].router2.simulatedIPAddress.equals(routerIP)) {
-        return i;
-      }
+  public int howMany() {
+    for(int i = 0; i < 4; i++) {
+        if (ports[i] == null) {
+            return i;
+        }
     }
     return -1;
-  }
+  } 
   
 
   /**
@@ -48,7 +42,8 @@ public class Router {
    * @param destinationIP the ip adderss of the destination simulated router
    */
   private void processDetect(String destinationIP) {
-
+    WeightedGraph graph = new WeightedGraph(lsd);
+    System.out.println(graph.toString());
   }
 
   /**
@@ -69,14 +64,14 @@ public class Router {
    * NOTE: this command should not trigger link database synchronization
    */
   private void processAttach(String processIP, short processPort, String simulatedIP, short weight) {
-    if (portIndex < 4) {
+    int number = howMany();
+    if (number < 4) {
       RouterDescription router2 = new RouterDescription();
       router2.processIPAddress = "127.0.0.1";
       router2.processPortNumber = processPort;
       router2.simulatedIPAddress = simulatedIP;
       Link newLink = new Link(rd, router2, weight, true);
-      ports[portIndex] = newLink;
-      portIndex++;
+      ports[number] = newLink;
     }
     else {
       System.out.println("Ports full for router: " + rd.simulatedIPAddress);
@@ -87,10 +82,13 @@ public class Router {
    * broadcast Hello to neighbors
    */
   private void processStart() {
-    for (int i = 0; i < portIndex; i++) {
-      final Link port = ports[i];
-      Thread broadcast = new Thread(new Client(rd, lsd, ports, port));
-      broadcast.start();
+    int number = howMany();
+    for (int i = 0; i < number; i++) {
+      if (ports[i].attached) {
+        Link port = ports[i];
+        Thread broadcast = new Thread(new Client(rd, lsd, ports, port));
+        broadcast.start();
+      }
     }
   }
 
