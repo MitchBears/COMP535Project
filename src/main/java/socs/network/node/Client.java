@@ -26,6 +26,7 @@ public class Client extends Server {
             outgoingPacket.srcIP = port.router1.simulatedIPAddress;
             outgoingPacket.srcProcessIP = "127.0.0.1";
             outgoingPacket.srcProcessPort = port.router1.processPortNumber;
+            outgoingPacket.srcProcessWeight = port.linkWeight;
             outgoingPacket.neighborID = port.router1.simulatedIPAddress;
             outgoingPacket.sospfType = 0;
             port.router2.status = RouterStatus.INIT;
@@ -38,23 +39,19 @@ public class Client extends Server {
                 port.router2.status = RouterStatus.TWO_WAY;
                 System.out.println("set " + incomingPacket.srcIP + " state to TWO_WAY");
                 out.writeObject(outgoingPacket);
+                //Close input streams and socketconnection, all communication through this socket is done.
                 out.close();
                 in.close();
                 socketConnection.close();
                 LinkDescription newLinkDescription = new LinkDescription();
-                //Create new link, update LSA, send all LSA's to all neighboring nodes.
+                //Create new link, update LSA, send LSP to all neighboring nodes.
                 newLinkDescription.linkID = port.router2.simulatedIPAddress;
                 newLinkDescription.portNum = port.router2.processPortNumber;
                 newLinkDescription.linkWeight = port.linkWeight;
-                //Update LSA
                 lsd._store.get(rd.simulatedIPAddress).links.add(newLinkDescription);
                 lsd._store.get(rd.simulatedIPAddress).lsaSeqNumber++;
-                //TODO, for each neighbor, including the one you just created the link for, send the updated LSP.
                 int number = howMany();
-                //System.out.println("how many:" + number);
                 for(int i = 0; i < number; i++) {
-                    //System.out.println("Sending to:");
-                    //System.out.println(ports[i].router2.simulatedIPAddress);
                     SOSPFPacket packet = createLSPPacket(ports[i].router2, ports[i]);
                     Socket socket = new Socket(InetAddress.getLocalHost(), ports[i].router2.processPortNumber);
                     ObjectOutputStream lspOut = new ObjectOutputStream(socket.getOutputStream());

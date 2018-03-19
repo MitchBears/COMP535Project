@@ -5,10 +5,10 @@ import java.io.Serializable;
 public class LinkDescription implements Serializable {
   public String linkID;
   public int portNum;
-  public int tosMetrics;
+  //public int tosMetrics; Changed the name to linkWeight
   public short linkWeight;
 
   public String toString() {
-    return linkID + ","  + portNum + "," + tosMetrics;
+    return linkID + ","  + portNum + "," + linkWeight;
   }
 }

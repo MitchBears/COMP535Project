@@ -9,7 +9,6 @@ public class Router {
   protected LinkStateDatabase lsd;
 
   RouterDescription rd = new RouterDescription();
-  int portIndex;
 
   //assuming that all routers are with 4 ports
   Link[] ports = new Link[4];
@@ -21,7 +20,9 @@ public class Router {
     rd.processPortNumber = port;
     Thread listen = new Thread(new Server(rd, lsd, ports));
     listen.start();
-    portIndex = 0;
+    System.out.println();
+    System.out.println("Router with IP address: " + rd.simulatedIPAddress + " created");
+    System.out.println("Listening on port: " + port);
   }
 
   public int howMany() {
@@ -42,8 +43,7 @@ public class Router {
    * @param destinationIP the ip adderss of the destination simulated router
    */
   private void processDetect(String destinationIP) {
-    WeightedGraph graph = new WeightedGraph(lsd);
-    System.out.println(graph.toString());
+    System.out.println(lsd.getShortestPath(destinationIP));
   }
 
   /**
@@ -84,6 +84,7 @@ public class Router {
   private void processStart() {
     int number = howMany();
     for (int i = 0; i < number; i++) {
+      //Only send hello to ports that this router has attached
       if (ports[i].attached) {
         Link port = ports[i];
         Thread broadcast = new Thread(new Client(rd, lsd, ports, port));
@@ -109,7 +110,8 @@ public class Router {
    */
   private void processNeighbors() {
     System.out.println("Printing Neighbors for router: " + rd.simulatedIPAddress);
-    for (int i = 0; i < portIndex; i++) {
+    int number = howMany();
+    for (int i = 0; i < number; i++) {
       if(ports[i].router2.status == RouterStatus.TWO_WAY){
         System.out.println("neighbor " + (i+1) + " [IP ADDRESS]: " + ports[i].router2.simulatedIPAddress);
       }

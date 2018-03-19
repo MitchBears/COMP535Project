@@ -8,12 +8,13 @@ public class WeightedGraph {
 
     short[][] edges;
     String[] IDs;
+
     public WeightedGraph(LinkStateDatabase newLSD) {
         int length = newLSD._store.keySet().size();
         edges = new short[length][length];
         IDs = new String[length];
         int idIndex = 0;
-
+        
         for (LSA lsa : newLSD._store.values()) {
             IDs[idIndex] = lsa.linkStateID;
             idIndex++;
@@ -44,7 +45,7 @@ public class WeightedGraph {
             string.append("Router: " + IDs[i]);
             for (int j = 0; j < edges[i].length; j++) {
                 if (edges[i][j] != 0) {
-                    string.append("Link to: " + IDs[j] + " weight: " + edges[i][j]);
+                    string.append("Link to: " + IDs[j] + " weight: " + edges[i][j] + '\n');
                 }
             }
         }
